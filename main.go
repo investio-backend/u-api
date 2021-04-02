@@ -30,17 +30,6 @@ func main() {
 		return
 	}
 
-	// tokens, _ := tokenService.CreateTokens("4")
-	// fmt.Println(tokens.AccessToken)
-
-	// // testToken := "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MTcyODA3MjUsImlhdCI6MTYxNzI4MDY2NSwiaXNfYXV0aG9yaXplZCI6dHJ1ZSwiaXNfcmVmcmVzaCI6ZmFsc2UsImlzcyI6Imlzc3VlcjEiLCJqdGkiOiJjY2RkNWMxYS02ZTdkLTRiZWQtYWUzNC05M2VjYTgyOWMyNmYiLCJzdWIiOiJzdWJqZWN0MSIsInVzZXJfaWQiOiI0In0.pLBmjXIqGxWD-ec7EVMSdVAd2OSI_Cy3NXvYTY1Y0TCKVab1OMaMjUaxTM2jso4e7ldKs8C8dl_zk2aXay7vCQ"
-	// // detail, err := authService.DecodeToken(testToken)
-	// detail, err := authService.DecodeToken(tokens.AccessToken)
-	// if err != nil {
-	// 	fmt.Println("ERR: ", err.Error())
-	// }
-	// fmt.Println(detail.IsAuthorized)
-
 	if err := redisService.TestConnection(); err != nil {
 		panic(err)
 	}

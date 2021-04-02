@@ -45,9 +45,6 @@ func (s *authService) DecodeToken(rawJWT string) (parsedJWT *jwt.JSONWebToken, r
 	}
 	result = &schema.TokenClaims{}
 	err = parsedJWT.Claims(s.PublicKey, result)
-	// if err != nil {
-	// 	log.Println("Failed to get claims JWT:%+v", err)
-	// }
 	return
 }
 
@@ -62,9 +59,7 @@ func (s *authService) setKey() (err error) {
 	s.PrivateKey = ed25519.NewKeyFromSeed(seed)
 	s.PublicKey, ok = s.PrivateKey.Public().(ed25519.PublicKey)
 	if !ok {
-		// fmt.Println("problem casting public key to ed25519 public key")
-		err = errors.New("problem casting public key to ed25519 public key")
-		// panic(err.Error())
+		err = errors.New("problem with casting public key to ed25519 public key")
 	}
 	return
 }

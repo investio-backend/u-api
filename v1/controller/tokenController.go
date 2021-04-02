@@ -75,13 +75,7 @@ func (c *tokenController) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "hello") // TODO: Return user info
 }
 
-// type RefreshBody struct {
-// 	RefreshToken string `json:"refresh_token"`
-// }
-
 func (c *tokenController) LogOut(ctx *gin.Context) {
-	// jwtStr := c.authService.ExtractHeader(ctx.Request)
-
 	// Get access token
 	accessStr, err := ctx.Cookie("accessToken")
 	if err != nil {
@@ -104,6 +98,8 @@ func (c *tokenController) LogOut(ctx *gin.Context) {
 	// Remove access token from client
 	ctx.SetCookie("accessToken", "bye", -1, "/user", "192.168.50.233", false, true)
 	ctx.SetCookie("accessToken", "bye", -1, "/user", "investio.api.dewkul.me", false, true)
+
+	// TODO: Check blocked access token
 
 	// Get Refresh Token
 	refreshStr, err := ctx.Cookie("refreshToken")
@@ -128,7 +124,6 @@ func (c *tokenController) LogOut(ctx *gin.Context) {
 		RefreshUuid: refreshJWT.Claims.ID,
 		AtExpires:   int64(*accessJWT.Claims.Expiry),
 		RtExpires:   int64(*refreshJWT.Claims.Expiry),
-		// UserID: accessJWT.UserID,
 	}
 
 	if accessJWT.UserID != refreshJWT.UserID {
@@ -168,6 +163,7 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 		return
 	}
 
+	// TODO: Check blocked refresh token
 	if timeDiff < REF_TOKEN_MIN_TTL.Seconds() {
 		// Issue new refresh token
 		jwtStr, jwtClaim, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.RefreshTokenType)
