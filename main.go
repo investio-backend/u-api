@@ -59,8 +59,8 @@ func main() {
 	v1 := server.Group("/user/v1")
 	{
 		v1.POST("/login", tokenController.Login)
-		v1.GET("/logout", tokenController.LogOut)
-		v1.GET("/refresh", tokenController.Refresh)
+		v1.POST("/logout", tokenController.LogOut)
+		v1.POST("/refresh", tokenController.Refresh)
 	}
 	log.Fatal(server.Run(":" + os.Getenv("USER_API_PORT")))
 }
