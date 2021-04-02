@@ -50,7 +50,7 @@ func (s *authService) DecodeToken(rawJWT string) (parsedJWT *jwt.JSONWebToken, r
 
 func (s *authService) setKey() (err error) {
 	// Read seed
-	seed, err := ioutil.ReadFile("token.key")
+	seed, err := ioutil.ReadFile("./keys/token.key")
 	if err != nil {
 		return
 	}

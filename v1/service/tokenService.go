@@ -54,7 +54,7 @@ func (s *tokenService) IssueToken(userID string, tokenType schema.TokenType) (Jw
 		)
 
 		// Read seed
-		seed, err = ioutil.ReadFile("token.key")
+		seed, err = ioutil.ReadFile("./keys/token.key")
 		if err != nil {
 			// Create a new key
 			privateKey, _, err = s.genKeyAndWriteSeed()
@@ -129,6 +129,6 @@ func (s *tokenService) genKeyAndWriteSeed() (privKey ed25519.PrivateKey, pubKey 
 		return
 	}
 	seed := privKey.Seed()
-	err = ioutil.WriteFile("token.key", seed, 0600)
+	err = ioutil.WriteFile("./keys/token.key", seed, 0600)
 	return
 }
