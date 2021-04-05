@@ -32,8 +32,7 @@ FROM scratch
 COPY --from=builder /dist/main /
 
 ENV TZ=Asia/Bangkok
-COPY .env .
-# ENV GIN_MODE=release
+ENV GIN_MODE=release
 
 # Command to run
 ENTRYPOINT ["/main"]

@@ -14,9 +14,6 @@ import (
 	"gitlab.com/investio/backend/user-api/v1/service"
 )
 
-// "github.com/gin-contrib/cors"
-// "github.com/gin-gonic/gin"
-
 var (
 	tokenService service.TokenService = service.NewTokenService()
 	authService  service.AuthService  = service.NewAuthService()
@@ -26,10 +23,12 @@ var (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-		return
+	if os.Getenv("GIN_MODE") != "release" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file")
+			return
+		}
 	}
 
 	if err := redisService.TestConnection(); err != nil {
@@ -53,5 +52,9 @@ func main() {
 		v1.POST("/logout", tokenController.LogOut)
 		v1.POST("/refresh", tokenController.Refresh)
 	}
-	log.Fatal(server.Run(":" + os.Getenv("USER_API_PORT")))
+	port := os.Getenv("API_PORT")
+	if port == "" {
+		port = "5005"
+	}
+	log.Fatal(server.Run(":" + port))
 }
