@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  u-api:
+    image: dewkul/inv-u-api-test
+    env_file: .env
+    container_name: inv-u-api
+    ports:
+      - ${USER_API_PORT}:${USER_API_PORT}
