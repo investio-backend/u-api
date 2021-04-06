@@ -7,6 +7,8 @@ require (
 	github.com/gin-gonic/gin v1.6.3 // indirect
 	github.com/go-redis/redis/v8 v8.8.0 // indirect
 	github.com/joho/godotenv v1.3.0 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/toorop/gin-logrus v0.0.0-20210225092905-2c785434f26f // indirect
 	github.com/twinj/uuid v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
