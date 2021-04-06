@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
+
+	"github.com/sirupsen/logrus"
+	ginlogrus "github.com/toorop/gin-logrus"
 
 	_ "time/tzdata"
 
@@ -15,38 +17,40 @@ import (
 )
 
 var (
-	tokenService service.TokenService = service.NewTokenService()
-	authService  service.AuthService  = service.NewAuthService()
-	redisService service.RedisService = service.NewRedisService(context.Background())
+	log = logrus.New()
 
-	tokenController controller.TokenController = controller.NewTokenController(tokenService, authService, redisService)
+	tokenService = service.NewTokenService()
+	authService  = service.NewAuthService()
+	redisService = service.NewRedisService(context.Background())
+
+	tokenController = controller.NewTokenController(tokenService, authService, redisService)
 )
 
 func main() {
 	if os.Getenv("GIN_MODE") != "release" {
 		err := godotenv.Load()
 		if err != nil {
-			log.Fatal("Error loading .env file")
-			return
+			log.Warn("Main: Not using .env file")
 		}
 	}
 
 	if err := redisService.TestConnection(); err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
-	server := gin.Default()
+	r := gin.New()
+	r.Use(ginlogrus.Logger(log), gin.Recovery())
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"http://localhost:8080", "http://192.168.50.121:3003", "https://investio.dewkul.me", "https://investio.netlify.app"}
+	corsConfig.AllowOrigins = []string{"http://localhost:2564", "http://192.168.50.121:3003", "https://investio.dewkul.me", "https://investio.netlify.app"}
 	// To be able to send tokens to the server.
 	corsConfig.AllowCredentials = true
 
 	// OPTIONS method for VueJS
 	corsConfig.AddAllowMethods("OPTIONS")
-	server.Use(cors.New(corsConfig))
+	r.Use(cors.New(corsConfig))
 
-	v1 := server.Group("/user/v1")
+	v1 := r.Group("/user/v1")
 	{
 		v1.POST("/login", tokenController.Login)
 		v1.POST("/logout", tokenController.LogOut)
@@ -56,5 +60,5 @@ func main() {
 	if port == "" {
 		port = "5005"
 	}
-	log.Fatal(server.Run(":" + port))
+	log.Panic(r.Run(":" + port))
 }

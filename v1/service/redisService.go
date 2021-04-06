@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
-	"log"
 	"os"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
@@ -20,14 +21,16 @@ type RedisService interface {
 type redisService struct {
 	client *redis.Client
 	rctx   context.Context
+	log    *logrus.Logger
 }
 
 func NewRedisService(redisCtx context.Context) RedisService {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	var logger = logrus.New()
+	if os.Getenv("GIN_MODE") != "release" {
+		if err := godotenv.Load(); err != nil {
+			logger.Warn("RedisService: Not using .env file")
+		}
 	}
-
 	//Initializing redis
 	dsn := os.Getenv("REDIS_HOST")
 	pwd := os.Getenv("REDIS_PWD")
@@ -42,6 +45,7 @@ func NewRedisService(redisCtx context.Context) RedisService {
 			DB:       0, // use default DB
 		}),
 		rctx: redisCtx,
+		log:  logger,
 	}
 }
 
