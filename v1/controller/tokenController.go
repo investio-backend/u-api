@@ -47,12 +47,12 @@ func (c *tokenController) Login(ctx *gin.Context) {
 	var u User
 
 	if err := ctx.ShouldBindJSON(&u); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, "Invalid JSON provided")
+		ctx.JSON(http.StatusUnprocessableEntity, "Invalid data provided")
 		return
 	}
 	//compare the user from the request, with the one we defined:
 	if user.Username != u.Username || user.Password != u.Password {
-		ctx.JSON(http.StatusUnauthorized, "Invalid login credentials")
+		ctx.JSON(http.StatusForbidden, "Invalid login credentials")
 		return
 	}
 
