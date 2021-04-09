@@ -153,22 +153,24 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 
 	_, refreshJWT, err := c.authService.DecodeToken(refreshStr)
 	if err != nil {
-		ctx.AbortWithError(http.StatusUnauthorized, err)
+		ctx.AbortWithError(http.StatusForbidden, err)
 		return
 	}
 
 	isExp, timeDiff := c.authService.IsExpired(refreshJWT)
 	if isExp {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+		ctx.AbortWithStatusJSON(http.StatusForbidden, "Token expired")
 		return
 	}
 
 	// TODO: Check blocked refresh token
+
+	// Check if it's time to issue new refresh token
 	if timeDiff < REF_TOKEN_MIN_TTL.Seconds() {
 		// Issue new refresh token
 		jwtStr, jwtClaim, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.RefreshTokenType)
 		if err != nil {
-			ctx.AbortWithError(http.StatusInternalServerError, err)
+			ctx.AbortWithError(http.StatusBadGateway, err)
 		}
 		now := time.Now().Unix()
 
