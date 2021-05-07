@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
-	ginlogrus "github.com/toorop/gin-logrus"
 
 	_ "time/tzdata"
 
@@ -38,8 +37,9 @@ func main() {
 		log.Panic(err)
 	}
 
-	r := gin.New()
-	r.Use(ginlogrus.Logger(log), gin.Recovery())
+	// r := gin.New()
+	// r.Use(ginlogrus.Logger(log), gin.Recovery())
+	r := gin.Default()
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{"http://localhost:2564", "http://192.168.50.121:3003", "https://investio.dewkul.me", "https://investio.netlify.app"}

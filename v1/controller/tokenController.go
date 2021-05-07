@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -33,6 +34,7 @@ type tokenController struct {
 	tokenService service.TokenService
 	authService  service.AuthService
 	redisService service.RedisService
+	domains      []string
 }
 
 func NewTokenController(tokenService service.TokenService, authService service.AuthService, redisService service.RedisService) TokenController {
@@ -40,6 +42,8 @@ func NewTokenController(tokenService service.TokenService, authService service.A
 		tokenService: tokenService,
 		authService:  authService,
 		redisService: redisService,
+		// TODO: Remove 192.168.50.233
+		domains: []string{"127.0.0.1", "dewkul.me", "192.168.50.233"},
 	}
 }
 
@@ -66,22 +70,32 @@ func (c *tokenController) Login(ctx *gin.Context) {
 	// if _, acsDiffExp := c.authService.IsExpired()
 
 	now := time.Now().Unix()
-	// TODO: Rm 192.168.50.233
-	ctx.SetCookie("accessToken", tokens.AccessToken, int(tokens.AcsExpires-now), "/user", "192.168.50.233", false, true)
-	ctx.SetCookie("refreshToken", tokens.RefreshToken, int(tokens.RefExpires-now), "/user", "192.168.50.233", false, true)
-	ctx.SetCookie("accessToken", tokens.AccessToken, int(tokens.AcsExpires-now), "/user", "investio.api.dewkul.me", false, true)
-	ctx.SetCookie("refreshToken", tokens.RefreshToken, int(tokens.RefExpires-now), "/user", "investio.api.dewkul.me", false, true)
 
-	ctx.JSON(http.StatusOK, "hello") // TODO: Return user info
+	// TODO: Rm 192.168.50.233
+	for _, domain := range c.domains {
+		ctx.SetCookie("accessToken", tokens.AccessToken, int(tokens.AcsExpires-now), "/", domain, false, false)
+		ctx.SetCookie("refreshToken", tokens.RefreshToken, int(tokens.RefExpires-now), "/user", domain, false, true)
+	}
+
+	// ctx.JSON(http.StatusOK, "hello") // TODO: Return user info
+	ctx.JSON(http.StatusOK, gin.H{
+		"access":   tokens.AccessToken,
+		"ref":      tokens.RefreshToken,
+		"uid":      3,
+		"username": "LnwTarn",
+	})
 }
 
 func (c *tokenController) LogOut(ctx *gin.Context) {
 	// Get access token
 	accessStr, err := ctx.Cookie("accessToken")
 	if err != nil {
+		fmt.Println(err.Error())
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	// fmt.Println("Logout - access = ", accessStr)
 
 	_, accessJWT, err := c.authService.DecodeToken(accessStr)
 	if err != nil {
@@ -96,8 +110,9 @@ func (c *tokenController) LogOut(ctx *gin.Context) {
 	}
 
 	// Remove access token from client
-	ctx.SetCookie("accessToken", "bye", -1, "/user", "192.168.50.233", false, true)
-	ctx.SetCookie("accessToken", "bye", -1, "/user", "investio.api.dewkul.me", false, true)
+	for _, domain := range c.domains {
+		ctx.SetCookie("accessToken", "bye", -1, "/", domain, false, true)
+	}
 
 	// TODO: Check blocked access token
 
@@ -114,9 +129,10 @@ func (c *tokenController) LogOut(ctx *gin.Context) {
 		return
 	}
 
-	// Remove access token from client
-	ctx.SetCookie("refreshToken", "bye", -1, "/user", "192.168.50.233", false, true)
-	ctx.SetCookie("refreshToken", "bye", -1, "/user", "investio.api.dewkul.me", false, true)
+	// Remove refresh token from client
+	for _, domain := range c.domains {
+		ctx.SetCookie("refreshToken", "bye", -1, "/user", domain, false, true)
+	}
 
 	// Add tokens to blocklist
 	tokenDetail := &schema.TokenDetail{
@@ -174,9 +190,10 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 		}
 		now := time.Now().Unix()
 
-		// TODO: Remove 192.168.50.233
-		ctx.SetCookie("refreshToken", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", "192.168.50.233", false, true)
-		ctx.SetCookie("refreshToken", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", "investio.api.dewkul.me", false, true)
+		// Set new refresh token
+		for _, domain := range c.domains {
+			ctx.SetCookie("refreshToken", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", domain, false, true)
+		}
 	}
 
 	// Issue new access token
@@ -186,7 +203,8 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 	}
 	now := time.Now().Unix()
 
-	// TODO: Remove 192.168.50.233
-	ctx.SetCookie("accessToken", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", "192.168.50.233", false, true)
-	ctx.SetCookie("accessToken", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", "investio.api.dewkul.me", false, true)
+	// Set new access token
+	for _, domain := range c.domains {
+		ctx.SetCookie("accessToken", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/", domain, false, true)
+	}
 }
