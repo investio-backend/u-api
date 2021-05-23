@@ -43,7 +43,7 @@ func NewTokenController(tokenService service.TokenService, authService service.A
 		authService:  authService,
 		redisService: redisService,
 		// TODO: Remove 192.168.50.233
-		domains: []string{"127.0.0.1", "dewkul.me", "192.168.50.233"},
+		domains: []string{"dewkul.me", "192.168.50.233"},
 	}
 }
 
@@ -73,8 +73,8 @@ func (c *tokenController) Login(ctx *gin.Context) {
 
 	// TODO: Rm 192.168.50.233
 	for _, domain := range c.domains {
-		ctx.SetCookie("accessToken", tokens.AccessToken, int(tokens.AcsExpires-now), "/", domain, false, false)
-		ctx.SetCookie("refreshToken", tokens.RefreshToken, int(tokens.RefExpires-now), "/user", domain, false, true)
+		ctx.SetCookie("acTk", tokens.AccessToken, int(tokens.AcsExpires-now), "/", domain, false, false)
+		ctx.SetCookie("rfTk", tokens.RefreshToken, int(tokens.RefExpires-now), "/user", domain, false, true)
 	}
 
 	// ctx.JSON(http.StatusOK, "hello") // TODO: Return user info
@@ -88,7 +88,7 @@ func (c *tokenController) Login(ctx *gin.Context) {
 
 func (c *tokenController) LogOut(ctx *gin.Context) {
 	// Get access token
-	accessStr, err := ctx.Cookie("accessToken")
+	accessStr, err := ctx.Cookie("acTk")
 	if err != nil {
 		fmt.Println(err.Error())
 		ctx.AbortWithStatus(http.StatusBadRequest)
@@ -111,13 +111,13 @@ func (c *tokenController) LogOut(ctx *gin.Context) {
 
 	// Remove access token from client
 	for _, domain := range c.domains {
-		ctx.SetCookie("accessToken", "bye", -1, "/", domain, false, true)
+		ctx.SetCookie("acTk", "bye", -1, "/", domain, false, true)
 	}
 
 	// TODO: Check blocked access token
 
 	// Get Refresh Token
-	refreshStr, err := ctx.Cookie("refreshToken")
+	refreshStr, err := ctx.Cookie("rfTk")
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -131,7 +131,7 @@ func (c *tokenController) LogOut(ctx *gin.Context) {
 
 	// Remove refresh token from client
 	for _, domain := range c.domains {
-		ctx.SetCookie("refreshToken", "bye", -1, "/user", domain, false, true)
+		ctx.SetCookie("rfTk", "bye", -1, "/user", domain, false, true)
 	}
 
 	// Add tokens to blocklist
@@ -161,7 +161,7 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 	REF_TOKEN_MIN_TTL := time.Minute * 10
 
 	// Get refresh token
-	refreshStr, err := ctx.Cookie("refreshToken")
+	refreshStr, err := ctx.Cookie("rfTk")
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -192,7 +192,7 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 
 		// Set new refresh token
 		for _, domain := range c.domains {
-			ctx.SetCookie("refreshToken", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", domain, false, true)
+			ctx.SetCookie("rfTk", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", domain, false, true)
 		}
 	}
 
@@ -205,6 +205,6 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 
 	// Set new access token
 	for _, domain := range c.domains {
-		ctx.SetCookie("accessToken", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/", domain, false, true)
+		ctx.SetCookie("acTk", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/", domain, false, true)
 	}
 }
