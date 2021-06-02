@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -34,7 +33,7 @@ type tokenController struct {
 	tokenService service.TokenService
 	authService  service.AuthService
 	redisService service.RedisService
-	domains      []string
+	// domains      []string
 }
 
 func NewTokenController(tokenService service.TokenService, authService service.AuthService, redisService service.RedisService) TokenController {
@@ -43,7 +42,7 @@ func NewTokenController(tokenService service.TokenService, authService service.A
 		authService:  authService,
 		redisService: redisService,
 		// TODO: Remove 192.168.50.233
-		domains: []string{"dewkul.me", "192.168.50.233"},
+		// domains: []string{"dewkul.me", "192.168.50.233"},
 	}
 }
 
@@ -69,70 +68,73 @@ func (c *tokenController) Login(ctx *gin.Context) {
 
 	// if _, acsDiffExp := c.authService.IsExpired()
 
-	now := time.Now().Unix()
+	// now := time.Now().Unix()
 
 	// TODO: Rm 192.168.50.233
-	for _, domain := range c.domains {
-		ctx.SetCookie("acTk", tokens.AccessToken, int(tokens.AcsExpires-now), "/", domain, false, false)
-		ctx.SetCookie("rfTk", tokens.RefreshToken, int(tokens.RefExpires-now), "/user", domain, false, true)
-	}
+	// for _, domain := range c.domains {
+	// 	ctx.SetCookie("acTk", tokens.AccessToken, int(tokens.AcsExpires-now), "/", domain, false, false)
+	// 	ctx.SetCookie("rfTk", tokens.RefreshToken, int(tokens.RefExpires-now), "/user", domain, false, true)
+	// }
 
 	// ctx.JSON(http.StatusOK, "hello") // TODO: Return user info
 	ctx.JSON(http.StatusOK, gin.H{
-		"access":   tokens.AccessToken,
-		"ref":      tokens.RefreshToken,
+		"acc":   tokens.AccessToken,
+		"a_exp": tokens.AcsExpires,
+		"ref":   tokens.RefreshToken,
+		// "r_exp":    tokens.RefExpires,
 		"uid":      3,
 		"username": "LnwTarn",
 	})
 }
 
+type aTkRequest struct {
+	AccessToken  string `json:"acc"`
+	RefreshToken string `json:"ref"`
+}
+
 func (c *tokenController) LogOut(ctx *gin.Context) {
-	// Get access token
-	accessStr, err := ctx.Cookie("acTk")
-	if err != nil {
-		fmt.Println(err.Error())
+	// Get access token  // accessStr, err := ctx.Cookie("acTk")
+	var reqBody aTkRequest
+
+	if err := ctx.ShouldBindJSON(&reqBody); err != nil {
+		// fmt.Println("Bind err ", err.Error())
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	// fmt.Println("Logout - access = ", accessStr)
 
-	_, accessJWT, err := c.authService.DecodeToken(accessStr)
+	_, accessJWT, err := c.authService.DecodeToken(reqBody.AccessToken)
 	if err != nil {
 		ctx.AbortWithError(http.StatusUnauthorized, err)
 		return
 	}
 
-	isExp, _ := c.authService.IsExpired(accessJWT)
-	if isExp {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	// Remove access token from client
-	for _, domain := range c.domains {
-		ctx.SetCookie("acTk", "bye", -1, "/", domain, false, true)
-	}
+	// // Remove access token from client
+	// for _, domain := range c.domains {
+	// 	ctx.SetCookie("acTk", "bye", -1, "/", domain, false, true)
+	// }
 
 	// TODO: Check blocked access token
 
 	// Get Refresh Token
-	refreshStr, err := ctx.Cookie("rfTk")
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
+	// refreshStr, err := ctx.Cookie("rfTk")
 
-	_, refreshJWT, err := c.authService.DecodeToken(refreshStr)
+	_, refreshJWT, err := c.authService.DecodeToken(reqBody.RefreshToken)
 	if err != nil {
 		ctx.AbortWithError(http.StatusUnauthorized, err)
 		return
 	}
 
-	// Remove refresh token from client
-	for _, domain := range c.domains {
-		ctx.SetCookie("rfTk", "bye", -1, "/user", domain, false, true)
+	if isExp, _ := c.authService.IsExpired(refreshJWT); isExp {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
 	}
+
+	// // Remove refresh token from client
+	// for _, domain := range c.domains {
+	// 	ctx.SetCookie("rfTk", "bye", -1, "/user", domain, false, true)
+	// }
 
 	// Add tokens to blocklist
 	tokenDetail := &schema.TokenDetail{
@@ -144,10 +146,11 @@ func (c *tokenController) LogOut(ctx *gin.Context) {
 
 	if accessJWT.UserID != refreshJWT.UserID {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
-		log.Println("Invalid access != refresh")
+		log.Println("Invalid access != refresh ", accessJWT.UserID, refreshJWT.UserID)
 		return
 	}
 
+	// Block both access & refresh tokens
 	if err := c.redisService.BlockTokens(accessJWT.UserID, tokenDetail); err != nil {
 		ctx.AbortWithError(http.StatusBadGateway, err)
 		log.Println("Redis: ", err.Error())
@@ -157,17 +160,21 @@ func (c *tokenController) LogOut(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "Logged out")
 }
 
+type rTkRequest struct {
+	RefreshToken string `json:"ref"`
+}
+
 func (c *tokenController) Refresh(ctx *gin.Context) {
 	REF_TOKEN_MIN_TTL := time.Minute * 10
+	var reqBody rTkRequest
 
-	// Get refresh token
-	refreshStr, err := ctx.Cookie("rfTk")
-	if err != nil {
+	// Get refresh token  // refreshStr, err := ctx.Cookie("rfTk")
+	if err := ctx.ShouldBind(&reqBody); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	_, refreshJWT, err := c.authService.DecodeToken(refreshStr)
+	_, refreshJWT, err := c.authService.DecodeToken(reqBody.RefreshToken)
 	if err != nil {
 		ctx.AbortWithError(http.StatusForbidden, err)
 		return
@@ -179,32 +186,44 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 		return
 	}
 
+	refreshToken := reqBody.RefreshToken
+
 	// TODO: Check blocked refresh token
 
 	// Check if it's time to issue new refresh token
 	if timeDiff < REF_TOKEN_MIN_TTL.Seconds() {
 		// Issue new refresh token
-		jwtStr, jwtClaim, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.RefreshTokenType)
+		jwtStr, _, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.RefreshTokenType)
+
 		if err != nil {
 			ctx.AbortWithError(http.StatusBadGateway, err)
 		}
-		now := time.Now().Unix()
+		// now := time.Now().Unix()
 
 		// Set new refresh token
-		for _, domain := range c.domains {
-			ctx.SetCookie("rfTk", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", domain, false, true)
-		}
+		refreshToken = jwtStr
+
+		// for _, domain := range c.domains {
+		// 	ctx.SetCookie("rfTk", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", domain, false, true)
+		// }
 	}
 
 	// Issue new access token
-	jwtStr, jwtClaim, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.AccessTokenType)
+	jwtStr, accessJwtClaim, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.AccessTokenType)
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 	}
-	now := time.Now().Unix()
+	// now := time.Now().Unix()
 
 	// Set new access token
-	for _, domain := range c.domains {
-		ctx.SetCookie("acTk", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/", domain, false, true)
-	}
+	accessToken := jwtStr
+	// for _, domain := range c.domains {
+	// 	ctx.SetCookie("acTk", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/", domain, false, true)
+	// }
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"acc":   accessToken,
+		"a_exp": accessJwtClaim.Expiry.Time().Unix(),
+		"ref":   refreshToken,
+	})
 }
