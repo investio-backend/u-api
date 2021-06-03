@@ -43,6 +43,7 @@ func SetupDB() (err error) {
 		return
 	}
 	UserDB.AutoMigrate(&model.User{})
+	UserDB.AutoMigrate(&model.UserData{})
 
 	// InfluxClient = influxdb2.NewClient(
 	// 	os.Getenv("INFLUX_HOST"),
