@@ -22,7 +22,7 @@ var (
 	authService  = service.NewAuthService()
 	redisService = service.NewRedisService(context.Background())
 
-	tokenController = controller.NewTokenController(tokenService, authService, redisService)
+	userController = controller.NewUserController(tokenService, authService, redisService)
 )
 
 func main() {
@@ -52,9 +52,10 @@ func main() {
 
 	v1 := r.Group("/user/v1")
 	{
-		v1.POST("/login", tokenController.Login)
-		v1.POST("/logout", tokenController.LogOut)
-		v1.POST("/refresh", tokenController.Refresh)
+		v1.POST("/login", userController.Login)
+		v1.POST("/logout", userController.LogOut)
+		v1.POST("/refresh", userController.Refresh)
+		v1.POST("/create", userController.CreateUser)
 	}
 	port := os.Getenv("API_PORT")
 	if port == "" {
