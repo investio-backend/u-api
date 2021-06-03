@@ -23,12 +23,13 @@ func (User) TableName() string {
 }
 
 type UserData struct {
-	ID        uint           `gorm:"primaryKey" json:"-"`
-	RiskScore uint8          `json:"risk_score"`
-	UserID    uint           `json:"-"`
-	CreatedAt time.Time      `json:"-"`
-	UpdatedAt time.Time      `json:"-"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID            uint           `gorm:"primaryKey" json:"-"`
+	RiskScore     uint8          `json:"risk_score"`
+	RiskUpdatedAt time.Time      `json:"risk_last_updated"`
+	UserID        uint           `json:"-"`
+	CreatedAt     time.Time      `json:"-"`
+	UpdatedAt     time.Time      `json:"-"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (UserData) TableName() string {

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/investio/backend/user-api/db"
 	"gitlab.com/investio/backend/user-api/v1/model"
@@ -10,7 +12,7 @@ type UserService interface {
 	Create(newUser *model.User) (err error)
 	GetByUsername(user *model.User, username string) (err error)
 	GetUserData(userData *model.UserData, userID uint) (err error)
-	GetRiskScore(userID uint) (score uint8, err error)
+	GetRiskScore(userID uint) (score uint8, updatedAt time.Time, err error)
 	SetRiskScore(userID uint, score uint8) (err error)
 }
 
@@ -51,12 +53,13 @@ func (s *userService) GetUserData(userData *model.UserData, userID uint) (err er
 	return
 }
 
-func (s *userService) GetRiskScore(userID uint) (score uint8, err error) {
+func (s *userService) GetRiskScore(userID uint) (score uint8, updatedAt time.Time, err error) {
 	var userData model.UserData
 	if err = db.UserDB.Where("user_id = ?", userID).First(&userData).Error; err != nil {
 		return
 	}
 	score = userData.RiskScore
+	updatedAt = userData.RiskUpdatedAt
 	return
 }
 
@@ -66,6 +69,7 @@ func (s *userService) SetRiskScore(userID uint, score uint8) (err error) {
 		return
 	}
 	userData.RiskScore = score
+	userData.RiskUpdatedAt = time.Now()
 
 	err = db.UserDB.Save(&userData).Error
 	return

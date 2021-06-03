@@ -373,13 +373,14 @@ func (c *userController) GetRiskScore(ctx *gin.Context) {
 		return
 	}
 
-	risk, err := c.userService.GetRiskScore(accessJWT.UserID)
+	risk, updatedAt, err := c.userService.GetRiskScore(accessJWT.UserID)
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadGateway, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{
-		"risk_score": risk,
+		"risk_score":   risk,
+		"last_updated": updatedAt,
 	})
 }
 
