@@ -1,13 +1,15 @@
 package controller
 
 import (
-	"log"
 	"net/http"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.com/investio/backend/user-api/v1/schema"
 	"gitlab.com/investio/backend/user-api/v1/service"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -23,21 +25,22 @@ var user = User{
 	Password: "CrazyTarnny",
 }
 
-type TokenController interface {
+type UserController interface {
 	Login(ctx *gin.Context)
 	LogOut(ctx *gin.Context)
 	Refresh(ctx *gin.Context)
+	CreateUser(ctx *gin.Context)
 }
 
-type tokenController struct {
+type userController struct {
 	tokenService service.TokenService
 	authService  service.AuthService
 	redisService service.RedisService
 	// domains      []string
 }
 
-func NewTokenController(tokenService service.TokenService, authService service.AuthService, redisService service.RedisService) TokenController {
-	return &tokenController{
+func NewUserController(tokenService service.TokenService, authService service.AuthService, redisService service.RedisService) UserController {
+	return &userController{
 		tokenService: tokenService,
 		authService:  authService,
 		redisService: redisService,
@@ -46,7 +49,7 @@ func NewTokenController(tokenService service.TokenService, authService service.A
 	}
 }
 
-func (c *tokenController) Login(ctx *gin.Context) {
+func (c *userController) Login(ctx *gin.Context) {
 	var u User
 
 	if err := ctx.ShouldBindJSON(&u); err != nil {
@@ -61,7 +64,7 @@ func (c *tokenController) Login(ctx *gin.Context) {
 
 	tokens, err := c.tokenService.CreateTokens(user.ID)
 	if err != nil {
-		log.Fatalln("Failed create token: ", err.Error())
+		log.Fatal("Failed create token: ", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, err.Error())
 		return
 	}
@@ -92,7 +95,7 @@ type aTkRequest struct {
 	RefreshToken string `json:"ref"`
 }
 
-func (c *tokenController) LogOut(ctx *gin.Context) {
+func (c *userController) LogOut(ctx *gin.Context) {
 	// Get access token  // accessStr, err := ctx.Cookie("acTk")
 	var reqBody aTkRequest
 
@@ -164,7 +167,7 @@ type rTkRequest struct {
 	RefreshToken string `json:"ref"`
 }
 
-func (c *tokenController) Refresh(ctx *gin.Context) {
+func (c *userController) Refresh(ctx *gin.Context) {
 	REF_TOKEN_MIN_TTL := time.Minute * 10
 	var reqBody rTkRequest
 
@@ -226,4 +229,26 @@ func (c *tokenController) Refresh(ctx *gin.Context) {
 		"a_exp": accessJwtClaim.Expiry.Time().Unix(),
 		"ref":   refreshToken,
 	})
+}
+
+type createUserReq struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (c *userController) CreateUser(ctx *gin.Context) {
+	var reqBody createUserReq
+	if err := ctx.ShouldBindJSON(&reqBody); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	hashByte, err := bcrypt.GenerateFromPassword([]byte(reqBody.Password), bcrypt.DefaultCost)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err.Error())
+	}
+	hashPwd := string(hashByte)
+	log.Info("Hash: ", string(hashPwd))
+	ctx.Status(200)
 }
