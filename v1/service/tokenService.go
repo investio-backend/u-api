@@ -45,8 +45,8 @@ func (s *tokenService) CreateTokens(userID uint) (tokens schema.Tokens, err erro
 }
 
 func (s *tokenService) SetTTL(atkTtl, rtkTtl int) {
-	s.ATK_TTL = time.Duration(atkTtl)
-	s.RTK_TTL = time.Duration(rtkTtl)
+	s.ATK_TTL = time.Minute * time.Duration(atkTtl)
+	s.RTK_TTL = time.Hour * time.Duration(rtkTtl)
 }
 
 func (s *tokenService) IssueToken(userID uint, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error) {
