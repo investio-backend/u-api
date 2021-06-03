@@ -31,7 +31,9 @@ func (s *userService) Create(newUser *model.User) (err error) {
 	// if err = db.UserDB.Save(newUser).Error; err != nil {
 	// 	return
 	// }
-	// err = db.UserDB.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&newUser).Error
+	// if err = db.UserDB.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&newUser).Error; err != nil {
+	// 	return
+	// }
 
 	ud := model.UserData{
 		UserID: newUser.ID,

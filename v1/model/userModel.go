@@ -12,7 +12,6 @@ type User struct {
 	Email      string         `gorm:"unique" json:"email"`
 	IsValidate bool           `gorm:"default:false" json:"is_validate"`
 	HashPwd    string         `json:"-"`
-	UserData   UserData       `json:"data"`
 	CreatedAt  time.Time      `json:"-"`
 	UpdatedAt  time.Time      `json:"-"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`

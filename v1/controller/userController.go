@@ -131,7 +131,6 @@ func (c *userController) Login(ctx *gin.Context) {
 		"ref":      tokens.RefreshToken,
 		"uid":      user.ID,
 		"username": user.Name,
-		"data":     user.UserData,
 		// "r_exp":    tokens.RefExpires,
 	})
 }
