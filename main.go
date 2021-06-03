@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 
@@ -34,6 +35,19 @@ func main() {
 			log.Warn("Main: Not using .env file")
 		}
 	}
+
+	aTkTTL, err := strconv.Atoi(os.Getenv("ATK_TTL"))
+	if err != nil {
+		log.Panic(err)
+	}
+
+	rTkTTL, err := strconv.Atoi(os.Getenv("RTK_TTL"))
+	if err != nil {
+		log.Panic(err)
+	}
+
+	log.Info("TTL: ", aTkTTL, rTkTTL)
+	tokenService.SetTTL(aTkTTL, rTkTTL)
 
 	if err := db.SetupDB(); err != nil {
 		log.Panic(err)
