@@ -13,8 +13,8 @@ import (
 )
 
 type TokenService interface {
-	CreateTokens(userID string) (tokens schema.Tokens, err error)
-	IssueToken(userID string, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error)
+	CreateTokens(userID uint) (tokens schema.Tokens, err error)
+	IssueToken(userID uint, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error)
 }
 
 type tokenService struct {
@@ -25,7 +25,7 @@ func NewTokenService() TokenService {
 	return &tokenService{}
 }
 
-func (s *tokenService) CreateTokens(userID string) (tokens schema.Tokens, err error) {
+func (s *tokenService) CreateTokens(userID uint) (tokens schema.Tokens, err error) {
 	accessJWT, accessClaims, err := s.IssueToken(userID, schema.AccessTokenType)
 	if err != nil {
 		return
@@ -41,10 +41,9 @@ func (s *tokenService) CreateTokens(userID string) (tokens schema.Tokens, err er
 	return
 }
 
-func (s *tokenService) IssueToken(userID string, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error) {
-
-	ACS_TTL := time.Minute * 2
-	REF_TTL := time.Hour * 1
+func (s *tokenService) IssueToken(userID uint, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error) {
+	ACS_TTL := time.Minute * 30
+	REF_TTL := time.Hour * 24 * 7
 
 	if s.builder == nil {
 		var (
