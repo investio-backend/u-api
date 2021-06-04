@@ -62,9 +62,9 @@ type allTokensBody struct {
 	RefreshToken string `json:"ref"`
 }
 
-type accessTokenBody struct {
-	AccessToken string `json:"acc"`
-}
+// type accessTokenBody struct {
+// 	AccessToken string `json:"acc"`
+// }
 
 type refreshTokenBody struct {
 	RefreshToken string `json:"ref"`
@@ -264,6 +264,7 @@ func (c *userController) Refresh(ctx *gin.Context) {
 		"acc":   accessToken,
 		"a_exp": accessJwtClaim.Expiry.Time().Unix(),
 		"ref":   refreshToken,
+		"uid":   accessJwtClaim.UserID,
 	})
 }
 
@@ -317,29 +318,54 @@ func (c *userController) RegisterUser(ctx *gin.Context) {
 
 func (c *userController) GetUserData(ctx *gin.Context) {
 	var (
-		reqBody  accessTokenBody
+		// reqBody  accessTokenBody
 		userData model.UserData
 	)
 
 	// Get access token
-	if err := ctx.ShouldBindJSON(&reqBody); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	_, accessJWT, err := c.authService.DecodeToken(reqBody.AccessToken)
-	if err != nil {
-		ctx.AbortWithError(http.StatusForbidden, err)
-		return
-	}
-
-	isExp, _ := c.authService.IsExpired(accessJWT)
-	if isExp {
+	accessJWT, errReason := c.authService.ValidateAccessToken(ctx.Request)
+	if errReason != "" {
 		ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-			"reason": "Token expired",
+			"reason": errReason,
 		})
 		return
 	}
+
+	// accessToken := c.authService.ExtractHeader(ctx.Request)
+	// // if err := ctx.ShouldBindJSON(&reqBody); err != nil {
+	// // 	ctx.AbortWithStatus(http.StatusBadRequest)
+	// // 	return
+	// // }
+
+	// if accessToken == "" {
+	// 	ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+	// 		"reason": "",
+	// 	})
+	// 	return
+	// }
+
+	// _, accessJWT, err := c.authService.DecodeToken(accessToken)
+	// if err != nil {
+	// 	ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+	// 		"reason": err.Error(),
+	// 	})
+	// 	return
+	// }
+
+	// if accessJWT.IsRefresh {
+	// 	ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+	// 		"reason": "token is invalid",
+	// 	})
+	// 	return
+	// }
+
+	// isExp, _ := c.authService.IsExpired(accessJWT)
+	// if isExp {
+	// 	ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+	// 		"reason": "Token expired",
+	// 	})
+	// 	return
+	// }
 
 	if err := c.userService.GetUserData(&userData, accessJWT.UserID); err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, err)
@@ -350,26 +376,34 @@ func (c *userController) GetUserData(ctx *gin.Context) {
 }
 
 func (c *userController) GetRiskScore(ctx *gin.Context) {
-	var reqBody accessTokenBody
+	// var reqBody accessTokenBody
+	var accessJWT *schema.TokenClaims
 
 	// Get access token
-	if err := ctx.ShouldBindJSON(&reqBody); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
+	// if err := ctx.ShouldBindJSON(&reqBody); err != nil {
+	// 	ctx.AbortWithStatus(http.StatusBadRequest)
+	// 	return
+	// }
 
-	_, accessJWT, err := c.authService.DecodeToken(reqBody.AccessToken)
-	if err != nil {
-		ctx.AbortWithError(http.StatusForbidden, err)
-		return
-	}
+	// _, accessJWT, err := c.authService.DecodeToken(reqBody.AccessToken)
+	// if err != nil {
+	// 	ctx.AbortWithError(http.StatusForbidden, err)
+	// 	return
+	// }
 
-	isExp, _ := c.authService.IsExpired(accessJWT)
-	if isExp {
+	// isExp, _ := c.authService.IsExpired(accessJWT)
+	// if isExp {
+	// 	ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+	// 		"reason": "Token expired",
+	// 	})
+	// 	return
+	// }
+
+	accessJWT, errReason := c.authService.ValidateAccessToken(ctx.Request)
+	if errReason != "" {
 		ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-			"reason": "Token expired",
+			"reason": errReason,
 		})
-		return
 	}
 
 	risk, updatedAt, err := c.userService.GetRiskScore(accessJWT.UserID)
@@ -384,30 +418,36 @@ func (c *userController) GetRiskScore(ctx *gin.Context) {
 }
 
 type updateRiskBody struct {
-	AccessToken string `json:"acc"`
-	RiskScore   uint8  `json:"risk_score"`
+	// AccessToken string `json:"acc"`
+	RiskScore uint8 `json:"risk_score"`
 }
 
 func (c *userController) UpdateRiskScore(ctx *gin.Context) {
 	var reqBody updateRiskBody
 
 	// Get access token
+	accessJWT, errReason := c.authService.ValidateAccessToken(ctx.Request)
+	if errReason != "" {
+		ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"reason": errReason,
+		})
+	}
 	if err := ctx.ShouldBindJSON(&reqBody); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	_, accessJWT, err := c.authService.DecodeToken(reqBody.AccessToken)
-	if err != nil {
-		ctx.AbortWithError(http.StatusForbidden, err)
-		return
-	}
+	// _, accessJWT, err := c.authService.DecodeToken(reqBody.AccessToken)
+	// if err != nil {
+	// 	ctx.AbortWithError(http.StatusForbidden, err)
+	// 	return
+	// }
 
-	isExp, _ := c.authService.IsExpired(accessJWT)
-	if isExp {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, "Token expired")
-		return
-	}
+	// isExp, _ := c.authService.IsExpired(accessJWT)
+	// if isExp {
+	// 	ctx.AbortWithStatusJSON(http.StatusForbidden, "Token expired")
+	// 	return
+	// }
 
 	// refreshToken := reqBody.RefreshToken
 
