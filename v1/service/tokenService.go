@@ -3,8 +3,9 @@ package service
 import (
 	"crypto/ed25519"
 	"io/ioutil"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twinj/uuid"
 	"gitlab.com/investio/backend/user-api/v1/schema"
@@ -13,19 +14,21 @@ import (
 )
 
 type TokenService interface {
-	CreateTokens(userID string) (tokens schema.Tokens, err error)
-	IssueToken(userID string, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error)
+	CreateTokens(userID uint) (tokens schema.Tokens, err error)
+	IssueToken(userID uint, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error)
+	SetTTL(atkTtl, rtkTtl int)
 }
 
 type tokenService struct {
-	builder jwt.Builder
+	builder          jwt.Builder
+	ATK_TTL, RTK_TTL time.Duration
 }
 
 func NewTokenService() TokenService {
 	return &tokenService{}
 }
 
-func (s *tokenService) CreateTokens(userID string) (tokens schema.Tokens, err error) {
+func (s *tokenService) CreateTokens(userID uint) (tokens schema.Tokens, err error) {
 	accessJWT, accessClaims, err := s.IssueToken(userID, schema.AccessTokenType)
 	if err != nil {
 		return
@@ -41,10 +44,14 @@ func (s *tokenService) CreateTokens(userID string) (tokens schema.Tokens, err er
 	return
 }
 
-func (s *tokenService) IssueToken(userID string, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error) {
+func (s *tokenService) SetTTL(atkTtl, rtkTtl int) {
+	s.ATK_TTL = time.Minute * time.Duration(atkTtl)
+	s.RTK_TTL = time.Hour * time.Duration(rtkTtl)
+}
 
-	ACS_TTL := time.Minute * 2
-	REF_TTL := time.Hour * 1
+func (s *tokenService) IssueToken(userID uint, tokenType schema.TokenType) (JwtStr string, tokenClaims schema.TokenClaims, err error) {
+	// ACS_TTL := time.Minute * time.Duration(s.ATK_TTL)
+	// REF_TTL := time.Hour * time.Duration(s.RTK_TTL)
 
 	if s.builder == nil {
 		var (
@@ -73,7 +80,7 @@ func (s *tokenService) IssueToken(userID string, tokenType schema.TokenType) (Jw
 		signerOpts.WithType("JWT")
 		rsaSigner, err = jose.NewSigner(key, &signerOpts)
 		if err != nil {
-			log.Println("failed to create signer: ", err)
+			log.Warn("failed to create signer: ", err)
 			return
 		}
 		// create an instance of Builder that uses the rsa signer
@@ -89,7 +96,7 @@ func (s *tokenService) IssueToken(userID string, tokenType schema.TokenType) (Jw
 				ID:       uuid.NewV4().String(),
 				Audience: jwt.Audience{"investio.dewkul.me", "investio.netlify.app"},
 				IssuedAt: jwt.NewNumericDate(time.Now()),
-				Expiry:   jwt.NewNumericDate(time.Now().Add(ACS_TTL)),
+				Expiry:   jwt.NewNumericDate(time.Now().Add(s.ATK_TTL)),
 			},
 			UserID:       userID,
 			IsAuthorized: true,
@@ -104,7 +111,7 @@ func (s *tokenService) IssueToken(userID string, tokenType schema.TokenType) (Jw
 				ID:       uuid.NewV4().String(),
 				Audience: jwt.Audience{"investio.dewkul.me", "investio.netlify.app"},
 				IssuedAt: jwt.NewNumericDate(time.Now()),
-				Expiry:   jwt.NewNumericDate(time.Now().Add(REF_TTL)),
+				Expiry:   jwt.NewNumericDate(time.Now().Add(s.RTK_TTL)),
 			},
 			UserID:       userID,
 			IsAuthorized: true,
@@ -118,7 +125,7 @@ func (s *tokenService) IssueToken(userID string, tokenType schema.TokenType) (Jw
 	// validate all ok, sign with the Ed25519 key, and return a compact JWT
 	JwtStr, err = s.builder.CompactSerialize()
 	if err != nil {
-		log.Println("failed to create JWT: ", err)
+		log.Warn("failed to create JWT: ", err)
 	}
 	return
 }

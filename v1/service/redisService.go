@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -14,8 +15,8 @@ import (
 
 type RedisService interface {
 	TestConnection() (err error)
-	BlockTokens(userID string, td *schema.TokenDetail) (err error)
-	ReadBlockAuth(detail *schema.AuthDetail) (userID string, err error)
+	BlockTokens(userID uint, td *schema.TokenDetail) (err error)
+	ReadBlockAuth(detail *schema.AuthDetail) (userID uint, err error)
 }
 
 type redisService struct {
@@ -54,22 +55,29 @@ func (s *redisService) TestConnection() (err error) {
 	return // return err
 }
 
-func (s *redisService) BlockTokens(userID string, td *schema.TokenDetail) (err error) {
+func (s *redisService) BlockTokens(userID uint, td *schema.TokenDetail) (err error) {
 	accessExp := time.Unix(td.AtExpires, 0) //converting Unix to UTC(to Time object)
 	refreshExp := time.Unix(td.RtExpires, 0)
 	now := time.Now()
 
-	if err = s.client.Set(s.rctx, td.AccessUuid, userID, accessExp.Sub(now)).Err(); err != nil {
+	userStrID := strconv.FormatUint(uint64(userID), 10)
+
+	if err = s.client.Set(s.rctx, td.AccessUuid, userStrID, accessExp.Sub(now)).Err(); err != nil {
 		return
 	}
 
-	if err = s.client.Set(s.rctx, td.RefreshUuid, userID, refreshExp.Sub(now)).Err(); err != nil {
+	if err = s.client.Set(s.rctx, td.RefreshUuid, userStrID, refreshExp.Sub(now)).Err(); err != nil {
 		return
 	}
 	return
 }
 
-func (s *redisService) ReadBlockAuth(detail *schema.AuthDetail) (userID string, err error) {
-	userID, err = s.client.Get(s.rctx, detail.ID).Result()
+func (s *redisService) ReadBlockAuth(detail *schema.AuthDetail) (userID uint, err error) {
+	userStrID, err := s.client.Get(s.rctx, detail.ID).Result()
+	if err != nil {
+		return 0, err
+	}
+	userID64, err := strconv.ParseUint(userStrID, 10, 32)
+	userID = uint(userID64)
 	return
 }

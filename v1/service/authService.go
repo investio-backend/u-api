@@ -17,6 +17,7 @@ type AuthService interface {
 	DecodeToken(rawJWT string) (parsedJWT *jwt.JSONWebToken, result *schema.TokenClaims, err error)
 	IsExpired(payload *schema.TokenClaims) (exp bool, diff float64)
 	ExtractHeader(r *http.Request) string
+	ValidateAccessToken(r *http.Request) (accessJwt *schema.TokenClaims, errReason string)
 }
 
 type authService struct {
@@ -83,4 +84,35 @@ func (s *authService) ExtractHeader(r *http.Request) string {
 		return strArr[1]
 	}
 	return ""
+}
+
+func (s *authService) ValidateAccessToken(r *http.Request) (accessJWT *schema.TokenClaims, errReason string) {
+	var err error
+	// Get access token
+	accessToken := s.ExtractHeader(r)
+
+	if accessToken == "" {
+		errReason = "Token is empty"
+		return
+	}
+
+	_, accessJWT, err = s.DecodeToken(accessToken)
+	if err != nil {
+		errReason = err.Error()
+		return
+	}
+
+	if accessJWT.IsRefresh {
+		errReason = "Token is invalid"
+		return
+	}
+
+	isExp, _ := s.IsExpired(accessJWT)
+	if isExp {
+		errReason = "Token expired"
+
+	}
+
+	return
+
 }
