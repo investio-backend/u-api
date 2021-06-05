@@ -28,6 +28,12 @@ var (
 	userController = controller.NewUserController(tokenService, authService, redisService, userService)
 )
 
+func getVersion(ctx *gin.Context) {
+	ctx.JSON(200, gin.H{
+		"version": "1.0",
+	})
+}
+
 func main() {
 	if os.Getenv("GIN_MODE") != "release" {
 		err := godotenv.Load()
@@ -46,7 +52,6 @@ func main() {
 		log.Panic(err)
 	}
 
-	log.Info("TTL: ", aTkTTL, rTkTTL)
 	tokenService.SetTTL(aTkTTL, rTkTTL)
 
 	if err := db.SetupDB(); err != nil {
@@ -63,6 +68,8 @@ func main() {
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{"http://localhost:2564", "http://192.168.50.121:3003", "https://investio.dewkul.me", "https://investio.netlify.app"}
+	// corsConfig.AllowMethods = []string{"PUT"}
+	corsConfig.AllowHeaders = []string{"Authorization", "content-type"}
 	// To be able to send tokens to the server.
 	corsConfig.AllowCredentials = true
 
@@ -79,6 +86,7 @@ func main() {
 		v1.GET("/data", userController.GetUserData)
 		v1.GET("/data/risk", userController.GetRiskScore)
 		v1.POST("/data/risk", userController.UpdateRiskScore)
+		v1.GET("/ver", getVersion)
 		// data := r.Group("/data")
 		// {
 		// 	data.GET("/risk", userController.GetRiskScore)
