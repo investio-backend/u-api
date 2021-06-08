@@ -205,7 +205,10 @@ func (c *userController) LogOut(ctx *gin.Context) {
 
 func (c *userController) Refresh(ctx *gin.Context) {
 	REF_TOKEN_MIN_TTL := time.Minute * 10
-	var reqBody refreshTokenBody
+	var (
+		reqBody refreshTokenBody
+		user    model.User
+	)
 
 	// Get refresh token  // refreshStr, err := ctx.Cookie("rfTk")
 	if err := ctx.ShouldBindJSON(&reqBody); err != nil {
@@ -231,40 +234,50 @@ func (c *userController) Refresh(ctx *gin.Context) {
 
 	// Check if it's time to issue new refresh token
 	if timeDiff < REF_TOKEN_MIN_TTL.Seconds() {
-		// Issue new refresh token
-		jwtStr, _, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.RefreshTokenType)
+		// Issue new refresh token & Set new refresh token
+		refreshToken, _, err = c.tokenService.IssueToken(refreshJWT.UserID, schema.RefreshTokenType)
 
 		if err != nil {
 			ctx.AbortWithError(http.StatusBadGateway, err)
 		}
 		// now := time.Now().Unix()
 
-		// Set new refresh token
-		refreshToken = jwtStr
+		//
+		// refreshToken = jwtStr
 
 		// for _, domain := range c.domains {
 		// 	ctx.SetCookie("rfTk", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/user", domain, false, true)
 		// }
 	}
 
-	// Issue new access token
-	jwtStr, accessJwtClaim, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.AccessTokenType)
+	// Issue new access token & Set new access token
+	accessToken, accessJwtClaim, err := c.tokenService.IssueToken(refreshJWT.UserID, schema.AccessTokenType)
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 	}
 	// now := time.Now().Unix()
 
-	// Set new access token
-	accessToken := jwtStr
+	//
+	// accessToken := jwtStr
 	// for _, domain := range c.domains {
 	// 	ctx.SetCookie("acTk", jwtStr, int(jwtClaim.Expiry.Time().Unix()-now), "/", domain, false, true)
 	// }
 
+	// Get username
+	if err := c.userService.GetByUserID(&user, accessJwtClaim.UserID); err != nil {
+		log.Error("error while retriving user", err.Error())
+		ctx.AbortWithStatusJSON(http.StatusBadGateway, gin.H{
+			"reason": "error while retriving user",
+		})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{
-		"acc":   accessToken,
-		"a_exp": accessJwtClaim.Expiry.Time().Unix(),
-		"ref":   refreshToken,
-		"uid":   accessJwtClaim.UserID,
+		"acc":      accessToken,
+		"a_exp":    accessJwtClaim.Expiry.Time().Unix(),
+		"ref":      refreshToken,
+		"uid":      accessJwtClaim.UserID,
+		"username": user.Name,
 	})
 }
 

@@ -11,6 +11,7 @@ import (
 type UserService interface {
 	Create(newUser *model.User) (err error)
 	GetByUsername(user *model.User, username string) (err error)
+	GetByUserID(user *model.User, userID uint) (err error)
 	GetUserData(userData *model.UserData, userID uint) (err error)
 	GetRiskScore(userID uint) (score uint8, updatedAt time.Time, err error)
 	SetRiskScore(userID uint, score uint8) (err error)
@@ -45,6 +46,11 @@ func (s *userService) Create(newUser *model.User) (err error) {
 
 func (s *userService) GetByUsername(user *model.User, username string) (err error) {
 	err = db.UserDB.Where("name = ?", username).First(&user).Error
+	return
+}
+
+func (s *userService) GetByUserID(user *model.User, userID uint) (err error) {
+	err = db.UserDB.First(&user, userID).Error
 	return
 }
 
