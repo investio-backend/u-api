@@ -312,8 +312,22 @@ func (c *userController) RegisterUser(ctx *gin.Context) {
 		return
 	}
 
-	log.Info("Uid ", user.ID)
-	ctx.JSON(http.StatusOK, user)
+	// Auto login
+	tokens, err := c.tokenService.CreateTokens(user.ID)
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, err.Error())
+		log.Fatal("Failed create token: ", err.Error())
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"acc":      tokens.AccessToken,
+		"a_exp":    tokens.AcsExpires,
+		"ref":      tokens.RefreshToken,
+		"uid":      user.ID,
+		"username": user.Name,
+		// "r_exp":    tokens.RefExpires,
+	})
 }
 
 func (c *userController) GetUserData(ctx *gin.Context) {
